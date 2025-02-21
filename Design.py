@@ -45,7 +45,7 @@ from Initialization import prepare_FEA
 # ----------------------------------------------------------------------------------------------------
 
 # Names to check for optimisation of Lamination Parameters
-KEY_NAMES = ("VR","V3_1","V3_2")
+# KEY_NAMES = ("VR","V3_1","V3_2")
 
 # Default optimization modes
 OPT_MODES = ('TO','TO+LP','LP')
@@ -63,8 +63,10 @@ class Design:
     and its properties
     '''
     def __init__(self, nmmcsx:int, nmmcsy:int, nelx:int, nely:int,
-                 VR:float = 0.5, V3_1:float = 0.0, V3_2:float = 0.0,
-                 mode:str=OPT_MODES[0],symmetry_condition:bool=False,
+                #  VR:float = 0.5, V3_1:float = 0.0, V3_2:float = 0.0,
+                # JELLE TODO : implement modes?
+                 mode:str=OPT_MODES[0],
+                 symmetry_condition:bool=False,
                  scalation_mode:str = "Bujny",
                  initialise_zero:bool=False,
                  add_noise:bool = False,
@@ -114,9 +116,9 @@ class Design:
 
         
         # Set the values of the Lamination Parameters     
-        self.__VR:float = VR
-        self.__V3_1:float = V3_1
-        self.__V3_2:float = V3_2
+        # self.__VR:float = VR
+        # self.__V3_1:float = V3_1
+        # self.__V3_2:float = V3_2
 
         # Initialise score
         self.__score_FEA:float = np.nan
@@ -166,6 +168,7 @@ class Design:
     # MEMBER INITIALISATION METHODS
     # ------------------------------------------------------------------------
     
+    # JELLE TODO : make shorter?
     def __default_non_zero_initialisation__(self,
                                             add_noise:bool)->None:
 
@@ -334,6 +337,7 @@ class Design:
     # Normalisation setups
     #-------------------------------------------------------------------------
     
+    # JELLE TODO : what are these norms??
     def __set_Bujny_normalisation__(self)->None:
         '''
         Sets the norms according to Bujny (2018).
@@ -704,12 +708,18 @@ class Design:
     # ------------------------------------------------------------------------
 
     # This is the default function used by supposing the material is isotropic
-    def evaluate_pre_cost_FEA_design(self,volfrac:float,KE:np.ndarray,iK:np.ndarray,
-                                     jK:np.ndarray,F:sparse.coo_matrix,
-                                     U:np.ndarray,freedofs:np.ndarray,
-                                     edofMat:np.ndarray,
-                                     penalty_factor:float = 0.0,
-                                     avoid_computation_for_not_compliance:bool=True)->float:
+    def evaluate_pre_cost_FEA_design(self,
+        volfrac:float,
+        KE:np.ndarray,
+        iK:np.ndarray,
+        jK:np.ndarray,
+        F:sparse.coo_matrix,
+        U:np.ndarray,
+        freedofs:np.ndarray,
+        edofMat:np.ndarray,
+        penalty_factor:float = 0.0,
+        avoid_computation_for_not_compliance:bool=True
+    ) -> float :
         
         '''
         This function computes the pre-cost to evaluate then the FEA cost function
@@ -817,18 +827,21 @@ class Design:
         TO_mat:np.ndarray = self.__topo.return_floating_topology()
 
         # Compute the cost of the Design
-        cost:float = evaluate_FEA(x=np.array([self.__VR,self.__V3_1,self.__V3_2]),
-                                    TO_mat=TO_mat,
-                                    iterr = iterr,
-                                    sample = sample,
-                                    volfrac=volfrac,
-                                    Emin=self.__Emin,E0=self.__E0,
-                                    run_=run_,
-                                    sparse_matrices_solver=use_sparse_matrices,
-                                    plotVariables=plotVariables,
-                                    symmetry_cond=self.symmetry_condition_imposed,
-                                    cost_function=cost_function,
-                                    penalty_factor=penalty_factor)
+        cost:float = evaluate_FEA(
+            # x=np.array([self.__VR,self.__V3_1,self.__V3_2]),
+            TO_mat=TO_mat,
+            iterr = iterr,
+            sample = sample,
+            volfrac=volfrac,
+            Emin=self.__Emin,
+            E0=self.__E0,
+            run_=run_,
+            sparse_matrices_solver=use_sparse_matrices,
+            plotVariables=plotVariables,
+            symmetry_cond=self.symmetry_condition_imposed,
+            cost_function=cost_function,
+            penalty_factor=penalty_factor
+        )
             
         # Update the cost
         #self.__score_FEA = cost
@@ -881,23 +894,23 @@ class Design:
             return "Lamination_Parameters Optimization"
         
     
-    @property
-    def VR(self)->float:
-        return self.__VR
+    # @property
+    # def VR(self)->float:
+    #     return self.__VR
 
-    @property           
-    def V3_1(self)->float:    
-        return self.__V3_1
+    # @property           
+    # def V3_1(self)->float:    
+    #     return self.__V3_1
     
-    @property 
-    def V3_2(self)->float:
-        return self.__V3_2
+    # @property 
+    # def V3_2(self)->float:
+    #     return self.__V3_2
     
-    def get_lamination_parameters(self)->np.ndarray:
-        return np.array([self.__VR, self.__V3_1,self.__V3_2 ])
+    # def get_lamination_parameters(self)->np.ndarray:
+    #     return np.array([self.__VR, self.__V3_1,self.__V3_2 ])
     
-    def get_scaled_lamination_parameters(self)->np.ndarray:
-        return np.array([self.__VR, 0.5*(self.__V3_1+1),0.5*(self.__V3_2+1)])
+    # def get_scaled_lamination_parameters(self)->np.ndarray:
+    #     return np.array([self.__VR, 0.5*(self.__V3_1+1),0.5*(self.__V3_2+1)])
     
     @property
     def list_of_MMC(self):
@@ -1134,61 +1147,61 @@ class Design:
                                   min_thickness=min_thickness,tol=tol)
             
             
-    def __modify_lamination_parameters_from_array(self,new_LM_array:np.ndarray,scaled:bool)->None:
-        '''
-        Modify the lamination parameters of the Design from given array.
-        The array should hold 3 elements at least.
+    # def __modify_lamination_parameters_from_array(self,new_LM_array:np.ndarray,scaled:bool)->None:
+    #     '''
+    #     Modify the lamination parameters of the Design from given array.
+    #     The array should hold 3 elements at least.
 
-        Inputs:
-        - new_LM_array: array with the new values of lamination parameters
-        - scaled: boolean variable controlling whether the values are scaled or not
-        '''
+    #     Inputs:
+    #     - new_LM_array: array with the new values of lamination parameters
+    #     - scaled: boolean variable controlling whether the values are scaled or not
+    #     '''
 
-        if self.__mode == OPT_MODES[0]:
-            raise AttributeError("The optimisation mode is just set to topology optimization \n" +
-                                 "Therefore the lamination parameters cannot be modified")
-        else:
+    #     if self.__mode == OPT_MODES[0]:
+    #         raise AttributeError("The optimisation mode is just set to topology optimization \n" +
+    #                              "Therefore the lamination parameters cannot be modified")
+    #     else:
 
-            # Check the score is not nan
-            # if not np.isnan(self.__score_FEA):
-            #     self.__score_FEA = np.nan
+    #         # Check the score is not nan
+    #         # if not np.isnan(self.__score_FEA):
+    #         #     self.__score_FEA = np.nan
             
-            # if type(new_LM_array) != np.ndarray:
-            #     new_LM_array = np.array(new_LM_array)
+    #         # if type(new_LM_array) != np.ndarray:
+    #         #     new_LM_array = np.array(new_LM_array)
             
-            # For safety flatten the array and check if the number of elements is equal to 3
-            new_LM_array = new_LM_array.ravel()
+    #         # For safety flatten the array and check if the number of elements is equal to 3
+    #         new_LM_array = new_LM_array.ravel()
 
-            if len(new_LM_array) != 3:
-                raise ValueError("The number of elements of new array shall be equal to 3")
+    #         if len(new_LM_array) != 3:
+    #             raise ValueError("The number of elements of new array shall be equal to 3")
             
-            # Modify values if scaled value is used
-            if scaled:
-                new_LM_array = [new_LM_array[0],new_LM_array[1]/0.5-1,new_LM_array[2]/0.5-1]
+    #         # Modify values if scaled value is used
+    #         if scaled:
+    #             new_LM_array = [new_LM_array[0],new_LM_array[1]/0.5-1,new_LM_array[2]/0.5-1]
         
-            # Apply the "repair" operator
-            if new_LM_array[0] < 0.0 or new_LM_array[0] > 1.0:
-                if new_LM_array[0] < 0.0:
-                    new_LM_array[0] = 0.0
-                else:
-                    new_LM_array[0] = 1.0
+    #         # Apply the "repair" operator
+    #         if new_LM_array[0] < 0.0 or new_LM_array[0] > 1.0:
+    #             if new_LM_array[0] < 0.0:
+    #                 new_LM_array[0] = 0.0
+    #             else:
+    #                 new_LM_array[0] = 1.0
             
-            if new_LM_array[1] < -1.0 or new_LM_array[1] > 1.0:
-                if new_LM_array[1] < -1.0:
-                    new_LM_array[1] = -1.0
-                else:
-                    new_LM_array[1] = 1.0
+    #         if new_LM_array[1] < -1.0 or new_LM_array[1] > 1.0:
+    #             if new_LM_array[1] < -1.0:
+    #                 new_LM_array[1] = -1.0
+    #             else:
+    #                 new_LM_array[1] = 1.0
             
-            if new_LM_array[2] < -1.0 or new_LM_array[2] > 1.0:
-                if new_LM_array[2] < -1.0:
-                    new_LM_array[2] = -1.0
-                else:
-                    new_LM_array[2] = 1.0
+    #         if new_LM_array[2] < -1.0 or new_LM_array[2] > 1.0:
+    #             if new_LM_array[2] < -1.0:
+    #                 new_LM_array[2] = -1.0
+    #             else:
+    #                 new_LM_array[2] = 1.0
             
-            # Assign the values of the array
-            self.__VR = new_LM_array[0]
-            self.__V3_1 = new_LM_array[1]
-            self.__V3_2 = new_LM_array[2]
+    #         # Assign the values of the array
+    #         self.__VR = new_LM_array[0]
+    #         self.__V3_1 = new_LM_array[1]
+    #         self.__V3_2 = new_LM_array[2]
     
     def modify_mutable_properties_from_array(self,new_properties_array:np.ndarray,
                                              scaled:bool,repair_level:int=2)->None:
@@ -1225,7 +1238,7 @@ class Design:
                                                                new_properties_array_mod.size]
 
                 # Modify the Lamination Parameters
-                self.__modify_lamination_parameters_from_array(otherArr,scaled)
+                # self.__modify_lamination_parameters_from_array(otherArr,scaled)
                 # Modify the values of MMC parameters
                 if scaled:           
                     self.__change_values_of_MMCs_from_unscaled_array(newArr,repair_level=repair_level)              
@@ -1247,7 +1260,7 @@ class Design:
 
         else:
             # Modify the Lamination Parameters
-            self.__modify_lamination_parameters_from_array(new_properties_array_mod,scaled)
+            pass # self.__modify_lamination_parameters_from_array(new_properties_array_mod,scaled)
             
     
     def compute_volume_ratio(self)-> float:
@@ -1315,6 +1328,7 @@ class Design:
         
         """
 
+        # JELLE TODO : rewrite?
         def smallest_distance(arr, position):
             """
             Find the smallest distance from a bit at a given position in a binary 2D array.
@@ -1346,7 +1360,7 @@ class Design:
             return min(distances)
             
    
-        
+        # JELLE TODO : indentation missing??
         # Get a copy of the associated topology
         assoc_topology:np.ndarray = self.__topo.return_floating_topology()
         
