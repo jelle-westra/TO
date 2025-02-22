@@ -376,7 +376,7 @@ def retrieve_Strain_Stress(
         if abs(density_vector[0,el] - _E0) < 1e-12:
             # JELLE TODO : make E function of density
             # JELLE TODO : what to make of this E0 and E thing? see the `Mesh.__assemble_finite_element_matrices`
-            C = (_E0) / (1 - _nu**2) * np.array([
+            C_mat = (_E0) / (1 - _nu**2) * np.array([
                 (1, _nu, 0),
                 (_nu, 1, 0),
                 (0, 0, (1-_nu)/2)
