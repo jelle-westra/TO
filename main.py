@@ -74,7 +74,7 @@ ioh_prob:Design_IOH_Wrapper = Design_IOH_Wrapper(nelx=100,
                                                 VR=0.5,
                                                 V3_1_init=0, #-0.1,
                                                 V3_2_init=0, #-0.4,
-                                                plot_variables=False,
+                                                plot_variables=True,
                                                 E0= 1.00,
                                                 Emin= 1e-9,
                                                 run_= RUN_E)
@@ -90,7 +90,7 @@ triggers = [
 
 logger = ioh.logger.Analyzer(
     root=os.getcwd(),                  # Store data in the current working directory
-    folder_name=f"./Figures_Python/Run_{run_e}",       # in a folder named: './Figures_Python/Run_{run_e}'
+    folder_name=f"./Figures_Python/Run_{RUN_E}",       # in a folder named: './Figures_Python/Run_{run_e}'
     algorithm_name="CMA-ES",    # meta-data for the algorithm used to generate these results
     store_positions=True,               # store x-variables in the logged files
     triggers= triggers,
@@ -150,7 +150,7 @@ opts:cma.CMAOptions = {'bounds':[0,1],'tolfun':1e-6,'seed':RANDOM_SEED,'verb_fil
 ioh_prob.attach_logger(logger)
 
 # Run CMA-ES
-fmin(ioh_prob,x_init,0.25,restarts=0,bipop=True,options=opts)
+fmin2(ioh_prob,x_init,0.25,restarts=0,bipop=True,options=opts)
 
 ioh_prob.reset()
 logger.close()
