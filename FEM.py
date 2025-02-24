@@ -520,21 +520,25 @@ class Mesh:
         # Initialise Global Matrices for finite element method
         self.__non_zero_matrices:bool = False
 
-        if not self.sparse_matrices:
-            self.__K:np.ndarray = np.zeros((self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF,
-                                            self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF))
-            self.__M:np.ndarray = np.zeros_like(self.__K)
-            self.__F:np.ndarray = np.zeros((self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF,
-                                            1))
-        
-        else:
-            self.__fill_sparse_pattern__(nn=self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF)
-        
-        # initialise the shape functions
-        self.__initialise_shape_functions__()
+        # TODO : reset shape and jacobian too before every evalutation?
+        self._SRI = SRI
+        self._reset()
 
-        # compute and initialise the Jacobian
-        self.__initialise_jacobian__(SRI=SRI)
+        # if not self.sparse_matrices:
+        #     self.__K:np.ndarray = np.zeros((self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF,
+        #                                     self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF))
+        #     self.__M:np.ndarray = np.zeros_like(self.__K)
+        #     self.__F:np.ndarray = np.zeros((self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF,
+        #                                     1))
+        
+        # else:
+        #     self.__fill_sparse_pattern__(nn=self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF)
+        
+        # # initialise the shape functions
+        # self.__initialise_shape_functions__()
+
+        # # compute and initialise the Jacobian
+        # self.__initialise_jacobian__(SRI=SRI)
     
     def __initialise_shape_functions__(self)->None:
 
@@ -631,16 +635,28 @@ class Mesh:
             self.__dSdxy1:np.ndarray = np.zeros((1,2,4,1))
             self.__dSdxy1[0,:,:,0] = self.__invJacob[:,:] @ self.__dSdksieta1[:,:,0]
 
-    
-    def __fill_sparse_pattern__(self,nn:int)->None:
-        '''
-        This function helps filling the sparse pattern for sparse matrices in order
-        to save computation time in the assembly of the matrices
+    # JELLE : resetting the matrices
+    def _reset(self) -> None :
+        ''''''
+        if not self.sparse_matrices:
+            self.__K:np.ndarray = np.zeros((self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF,
+                                            self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF))
+            self.__M:np.ndarray = np.zeros_like(self.__K)
+            self.__F:np.ndarray = np.zeros((self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF,
+                                            1))
+        else:
+            self.__fill_sparse_pattern__(nn=self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF)
 
-        Inputs
-            - nn: Size of the system
-        '''
+        # initialise the shape functions
+        self.__initialise_shape_functions__()
 
+        # compute and initialise the Jacobian
+        self.__initialise_jacobian__(SRI=self._SRI)
+
+    # JELLE : generate sparse pattern to be used for resetting the mesh
+    def _generate_sparse_pattern(self) -> None :
+        '''
+        '''
         # Create lists to save all the possible combination of indices of the vectors
         list_ii_arr:list = []
 
@@ -671,30 +687,39 @@ class Mesh:
                     list_jj.append((jN)*NUMBER_OF_NODAL_DOF+1)
         
         # Convert the lists of arrays
-        arr_ii_arr:np.ndarray = np.array(list_ii_arr)
+        self._arr_ii_arr:np.ndarray = np.array(list_ii_arr)
 
-        arr_ii:np.ndarray = np.array(list_ii)
-        arr_jj:np.ndarray = np.array(list_jj)
+        self._arr_ii:np.ndarray = np.array(list_ii)
+        self._arr_jj:np.ndarray = np.array(list_jj)
 
-        # Delete the lists
-        del list_jj, list_ii_arr, list_ii
+    
+    def __fill_sparse_pattern__(self,nn:int)->None:
+        '''
+        This function helps filling the sparse pattern for sparse matrices in order
+        to save computation time in the assembly of the matrices
+
+        Inputs
+            - nn: Size of the system
+        '''
+
+        if not(hasattr(self, '_arr_ii')) : self._generate_sparse_pattern()
 
         # Generate ones to match the size of the arrays
-        ones_arr_arr:np.ndarray = np.ones_like(arr_ii_arr)
-        zeros_arr_arr:np.ndarray = np.zeros_like(arr_ii_arr)
+        ones_arr_arr:np.ndarray = np.ones_like(self._arr_ii_arr)
+        zeros_arr_arr:np.ndarray = np.zeros_like(self._arr_ii_arr)
 
         # Generate ones to match the size of the arrays
-        ones_arr:np.ndarray = np.ones_like(arr_ii)
+        ones_arr:np.ndarray = np.ones_like(self._arr_ii)
 
         # Generate trial sparse matrix
-        tt_sparse:sparse.coo_matrix = sparse.coo_matrix((ones_arr,(arr_ii,arr_jj)),
+        tt_sparse:sparse.coo_matrix = sparse.coo_matrix((ones_arr,(self._arr_ii,self._arr_jj)),
                                                         shape=(nn, nn),dtype=float)
         
         tt_sparse:sparse.csr_matrix = tt_sparse.tocsr()
  
 
         # Generate trial force vector
-        tt_f_vec:sparse.csc_matrix = sparse.coo_matrix((ones_arr_arr,(arr_ii_arr,zeros_arr_arr)),
+        tt_f_vec:sparse.csc_matrix = sparse.coo_matrix((ones_arr_arr,(self._arr_ii_arr,zeros_arr_arr)),
                                                        shape=(nn, 1),dtype=float)
         tt_f_vec:sparse.csr_matrix = tt_f_vec.tocsr()
         

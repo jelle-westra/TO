@@ -43,6 +43,7 @@ from Initialization import prepare_FEA
 
 from Design import Design, OPT_MODES
 from FEA import COST_FUNCTIONS
+from FEM import Mesh
 
 
 class Design_IOH_Wrapper(Design,ioh.problem.RealSingleObjective):
@@ -98,7 +99,17 @@ class Design_IOH_Wrapper(Design,ioh.problem.RealSingleObjective):
             - plot_variables: set to plot the variables generated in the process
             - cost_function: the definition of the cost function to compute the target (so far only two options)
         """
-        
+        # JELLE DEBUG
+        self.count: int = 0
+
+        # JELLE
+        self._mesh: Mesh = Mesh(
+            length=nelx,height=nely,
+            element_length=1.0,
+            element_height=1.0,
+            sparse_matrices=use_sparse_matrices
+        )
+
         # This initialises the Design Class
         super().__init__(nmmcsx=nmmcsx, 
                          nmmcsy=nmmcsy, 
@@ -304,6 +315,9 @@ class Design_IOH_Wrapper(Design,ioh.problem.RealSingleObjective):
         Output:
         - target (`float`): target value evaluation (raw)
         """
+        # JELLE DEBUG
+        if (self.count >= 48) : exit()
+        self.count += 1
         
         # Change the variable dependency
         x_arr:np.ndarray = np.array(x).ravel()
@@ -313,15 +327,18 @@ class Design_IOH_Wrapper(Design,ioh.problem.RealSingleObjective):
         self.modify_mutable_properties_from_array(x_arr,scaled=True,repair_level=0)
 
         # Compute the actual objective
-        target = self.evaluate_FEA_design(volfrac=self.volfrac,
-                                             iterr=self.state.evaluations,
-                                             run_ = self.__run,
-                                             sample=1,
-                                             use_sparse_matrices=self.__use_sparse_matrices,
-                                             plotVariables=self.__plot_variables,
-                                             cost_function=self.__cost_function,
-                                             penalty_factor=0.0,  # This is for not computing the penalty
-                                             avoid_computation_for_not_compliance=False)
+        target = self.evaluate_FEA_design(
+            mesh=self._mesh,
+            volfrac=self.volfrac,
+            iterr=self.state.evaluations,
+            run_ = self.__run,
+            sample=1,
+            use_sparse_matrices=self.__use_sparse_matrices,
+            plotVariables=self.__plot_variables,
+            cost_function=self.__cost_function,
+            penalty_factor=0.0,  # This is for not computing the penalty
+            avoid_computation_for_not_compliance=False
+        )
 
         return target
     #def enforce_bounds(self, weight, enforced, exponent):

@@ -300,6 +300,7 @@ ADDITIONAL (HELPER) FUNCTIONS
 
 def evaluate_FEA(
     # x: np.ndarray,
+    mesh: Mesh,
     TO_mat: np.ndarray,
     iterr: int,
     sample: int,
@@ -310,7 +311,6 @@ def evaluate_FEA(
     penalty_factor: float=PENALTY_FACTOR_DEFAULT,
     plotVariables: bool=False,
     symmetry_cond: bool=True,
-    sparse_matrices_solver: bool=False,
     pyvista_plot: bool=True,
     cost_function: str=COST_FUNCTIONS[0],
     **kwargs
@@ -343,16 +343,16 @@ def evaluate_FEA(
     # VR:float = x[0]
     
     # Get length and height of the elements based on density matrix
-    l:float = TO_mat.shape[1]
-    h:float = TO_mat.shape[0]
+    # l:float = TO_mat.shape[1]
+    # h:float = TO_mat.shape[0]
     
     # Generate the mesh object
-    mesh: Mesh = Mesh(
-        length=l,height=h,
-        element_length=ELEMENT_LENGTH_DEFAULT,
-        element_height=ELEMENT_HEIGHT_DEFAULT,
-        sparse_matrices=sparse_matrices_solver
-    )
+    # mesh: Mesh = Mesh(
+    #     length=l,height=h,
+    #     element_length=ELEMENT_LENGTH_DEFAULT,
+    #     element_height=ELEMENT_HEIGHT_DEFAULT,
+    #     sparse_matrices=sparse_matrices_solver
+    # )
     
     # Reshape the density matrix into a vector
     #density_vec:np.ndarray = np.rot90(TO_mat).reshape((1,mesh.MeshGrid.nel_total),order='F')
@@ -372,6 +372,8 @@ def evaluate_FEA(
     #                                                     symmetry_cond)
     
     # mesh.set_matrices(density_vec,V1_e,V3_e,THICKNESS_DEFAULT,RHO_DEFAULT,E0,Emin)
+    
+    mesh._reset()
     mesh.set_matrices(density_vec,THICKNESS_DEFAULT,RHO_DEFAULT,E0,Emin)
 
    

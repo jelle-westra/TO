@@ -1,5 +1,6 @@
 *.DS_Store
-notepad.ipynb
+*.ipynb
+cProfile/
 
 # For now ignore results
 Figures_Python/

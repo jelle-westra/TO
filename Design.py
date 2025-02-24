@@ -20,7 +20,9 @@ from copy import copy, deepcopy
 
 # Import evaluate FEA function
 from FEA import evaluate_FEA, return_element_midpoint_positions, compute_number_of_joined_bodies, compute_number_of_joined_bodies_2
-from FEA import compute_objective_function
+
+# JELLE
+from FEM import Mesh
 
 # Import DataClasses
 from dataclasses import dataclass
@@ -147,7 +149,6 @@ class Design:
 
         # Set the linked topology
         self.__topo:Topology = Topology(np.zeros((nely,nelx)),E0,Emin)
-
         
         # Proceed with the non-zero initialisation
         if initialise_zero == False:
@@ -789,11 +790,18 @@ class Design:
 
         return cost
     
-    def evaluate_FEA_design(self,volfrac:float,iterr:int,sample:int,run_:int,
-                            use_sparse_matrices:bool=False,
-                            plotVariables=False, cost_function:str="compliance",
-                            penalty_factor:float=0.0,
-                            avoid_computation_for_not_compliance:bool=True)->float:
+    def evaluate_FEA_design(self,
+        mesh: Mesh,
+        volfrac:float,
+        iterr:int,
+        sample:int,
+        run_:int,
+        use_sparse_matrices:bool=False,
+        plotVariables=False, 
+        cost_function:str="compliance",
+        penalty_factor:float=0.0,
+        avoid_computation_for_not_compliance:bool=True
+    ) -> float :
         '''
         Sets the cost function of the design (from Finite Element Method)
 
@@ -829,6 +837,7 @@ class Design:
         # Compute the cost of the Design
         cost:float = evaluate_FEA(
             # x=np.array([self.__VR,self.__V3_1,self.__V3_2]),
+            mesh=mesh,
             TO_mat=TO_mat,
             iterr = iterr,
             sample = sample,
@@ -836,7 +845,6 @@ class Design:
             Emin=self.__Emin,
             E0=self.__E0,
             run_=run_,
-            sparse_matrices_solver=use_sparse_matrices,
             plotVariables=plotVariables,
             symmetry_cond=self.symmetry_condition_imposed,
             cost_function=cost_function,
