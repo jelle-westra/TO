@@ -1,5 +1,6 @@
-notepad.ipynb
+*.ipynb
 Figures_Python/
+cProfile/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

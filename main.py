@@ -74,7 +74,7 @@ ioh_prob:Design_IOH_Wrapper = Design_IOH_Wrapper(nelx=100,
                                                 VR=0.5,
                                                 V3_1_init=0, #-0.1,
                                                 V3_2_init=0, #-0.4,
-                                                plot_variables=True,
+                                                plot_variables=False,
                                                 E0= 1.00,
                                                 Emin= 1e-9,
                                                 run_= RUN_E)
