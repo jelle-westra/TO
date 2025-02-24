@@ -635,6 +635,7 @@ def return_element_midpoint_positions(TO_mat:np.ndarray,Emin:float,E0:float):
     - Emin: Setting of the Ersatz Material; to be numerically close to 0
     - E0: Setting the Material interpolator (close to 1)
     '''
+    print('return midpoint positions')
 
     # TODO: Generate a new mesh (apply some sparsity to not generate a large matrix space)
     # Get length and height of the elements based on density matrix

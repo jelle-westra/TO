@@ -21,9 +21,6 @@ from copy import copy, deepcopy
 # Import evaluate FEA function
 from FEA import evaluate_FEA, return_element_midpoint_positions, compute_number_of_joined_bodies, compute_number_of_joined_bodies_2
 
-# JELLE
-from FEM import Mesh
-
 # Import DataClasses
 from dataclasses import dataclass
 
@@ -41,6 +38,10 @@ import ioh
 
 # Import the Initialization
 from Initialization import prepare_FEA
+
+# JELLE
+from FEM import Mesh
+from scipy.ndimage import label
 
 # ----------------------------------------------------------------------------------------------------
 # ---------------------------------------------CONSTANTS----------------------------------------------
@@ -1405,12 +1406,15 @@ class Design:
         """
 
         # Get the topology
-        topo:Topology = self.topology
+        # topo:np.ndarray = self.topology
 
         # Pass it to the function (Don't return the array with bodies)
-        numBodies, _ = compute_number_of_joined_bodies_2(topo,self.Emin,self.E0)
+        # numBodies, _ = compute_number_of_joined_bodies_2(topo,self.Emin,self.E0)
 
-        return numBodies
+        # return numBodies
+        
+        # JELLE TODO : only use relative density, this uses the elasticity
+        return label((self.topology > 1/2).astype(np.uint8), structure=np.ones((3,3), dtype=np.uint8))[1]
     
 
     def identify_natural_constraints_violation(self)->List[bool]:

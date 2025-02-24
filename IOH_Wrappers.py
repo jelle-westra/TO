@@ -316,8 +316,8 @@ class Design_IOH_Wrapper(Design,ioh.problem.RealSingleObjective):
         - target (`float`): target value evaluation (raw)
         """
         # JELLE DEBUG
-        if (self.count >= 48) : exit()
-        self.count += 1
+        # if (self.count >= 48) : exit()
+        # self.count += 1
         
         # Change the variable dependency
         x_arr:np.ndarray = np.array(x).ravel()
