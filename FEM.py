@@ -194,28 +194,39 @@ def assemble_global_matrices(element_stiffness_mat:np.ndarray,
             global_mass_mat[(iN)*NNDOF:(iN+1)*NNDOF,(jN)*NNDOF:(jN+1)*NNDOF] =  global_mass_mat[(iN)*NNDOF:(iN+1)*NNDOF,(jN)*NNDOF:(jN+1)*NNDOF] +  MeNNDOF
 
 
-def assemble_global_spmatrices(element_stiffness_mat:np.ndarray,
-                               element_mass_mat:np.ndarray,
-                               element_force_vec:np.ndarray,
-                               global_stiffness_mat:sparse.lil_matrix,
-                               global_mass_mat:sparse.lil_matrix,
-                               global_force_vec:sparse.lil_matrix,
-                               elem_pos:int,E:np.ndarray,NEN:int,
-                               NNDOF:int)->None:
-    
+def assemble_global_spmatrix_mass(
+    element_mass_mat:np.ndarray,
+    global_mass_mat:sparse.lil_matrix,
+    elem_pos:int,
+    E:np.ndarray,
+    NEN:int,
+    NNDOF:int
+) -> None:
     for ii in range(NEN):
         iN = int(E[elem_pos,ii+1])
-        for jj  in range(NNDOF):
-            global_force_vec[iN+jj,0] = global_force_vec[iN+jj,0] + element_force_vec[jj+NNDOF*(ii),0]
-
         for jj in range(NEN):
             jN = int(E[elem_pos,jj+1])
-            KeNNDOF = element_stiffness_mat[(ii)*NNDOF:(ii+1)*NNDOF,(jj)*NNDOF:(jj+1)*NNDOF]
             MeNNDOF = element_mass_mat[(ii)*NNDOF:(ii+1)*NNDOF,(jj)*NNDOF:(jj+1)*NNDOF]
-            
             for ii_ind in range(NNDOF):
                 for jj_ind in range(NNDOF):
                     global_mass_mat[(iN)*NNDOF+ii_ind,(jN)*NNDOF+jj_ind] = MeNNDOF[ii_ind,jj_ind] + global_mass_mat[(iN)*NNDOF+ii_ind,(jN)*NNDOF+jj_ind]
+
+
+def assemble_global_spmatrix_stiffness(
+    element_stiffness_mat:np.ndarray,
+    global_stiffness_mat:sparse.lil_matrix,
+    elem_pos:int,
+    E:np.ndarray,
+    NEN:int,
+    NNDOF:int
+) -> None :
+    for ii in range(NEN):
+        iN = int(E[elem_pos,ii+1])
+        for jj in range(NEN):
+            jN = int(E[elem_pos,jj+1])
+            KeNNDOF = element_stiffness_mat[(ii)*NNDOF:(ii+1)*NNDOF,(jj)*NNDOF:(jj+1)*NNDOF]
+            for ii_ind in range(NNDOF):
+                for jj_ind in range(NNDOF):
                     global_stiffness_mat[(iN)*NNDOF+ii_ind,(jN)*NNDOF+jj_ind] = KeNNDOF[ii_ind,jj_ind] + global_stiffness_mat[(iN)*NNDOF+ii_ind,(jN)*NNDOF+jj_ind]
 
 
@@ -537,6 +548,10 @@ class Mesh:
         self._SRI = SRI
         self._generate_sparse_pattern()
         self._reset()
+
+
+        # TODO : fix this rho/thickness stuff
+        self._assemble_static_matrices(rho=1.0, thickness=1.0)
 
         # if not self.sparse_matrices:
         #     self.__K:np.ndarray = np.zeros((self.MeshGrid.grid_point_number_total*NUMBER_OF_NODAL_DOF,
@@ -911,6 +926,33 @@ class Mesh:
         '''
         return self.__F
     
+    def _assemble_static_matrices(self, rho: float, thickness: float) -> None :
+        # this only needs to be called once since the mass/force matrix does not change 
+        # essentially every element has the same mass.
+
+        Me = np.zeros((
+            NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
+            NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF
+        ), dtype=np.float64)
+
+        # Fe = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF, 1))
+        # force is zero anyways, no need to do anything with it.
+
+        for gqp in range(4):
+            # Elemental membrane mass matrix
+            S:np.ndarray = np.array([[self.__S4[0,gqp], 0, self.__S4[1,gqp], 0,self.__S4[2,gqp], 0, self.__S4[3,gqp], 0],
+                    [0, self.__S4[0,gqp], 0, self.__S4[1,gqp], 0, self.__S4[2,gqp], 0, self.__S4[3,gqp]]])
+
+            Me = Me + (rho*thickness*self.get_determinant_Jacobian_4()[0,gqp] * GQ_WEIGHT_4[gqp])*(S.transpose() @ S)
+
+        # from the original `assemble_global_spmatrices`
+        if not(self.sparse_matrices) : raise NotImplementedError('Non-sparse matrices are not supported (yet).')
+
+        for el in range(self.__mesh_grid.nel_total) : 
+            assemble_global_spmatrix_mass(Me, self.__M, el, self.MeshGrid.E, NUMBER_OF_NODES_X_ELEMENT, NUMBER_OF_NODAL_DOF)
+
+
+    
     # Computation member functions
     def __assemble_finite_element_matrices(self,
             density_vector:np.ndarray,
@@ -932,15 +974,11 @@ class Mesh:
         - rho: material density
         - Emin: Minimum Material Density
         '''
-        
-        # General B Matrix
-        B_gen = gen_B_matrix(self.__dSdxy4,4)
-
-        Me = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
-                NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF))
-        Ke_material = np.zeros_like(Me)
-        Ke_void     = np.zeros_like(Me)
-        Fe = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF, 1))
+        Ke_material = np.zeros((
+            NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
+            NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF
+        ), dtype=np.float64)
+        Ke_void = np.zeros_like(Ke_material)
 
         # General B Matrix
         B_gen = gen_B_matrix(self._Mesh__dSdxy4,4)
@@ -951,22 +989,16 @@ class Mesh:
             Ke_material += thickness*self.get_determinant_Jacobian_4()[0,gqp]*GQ_WEIGHT_4[gqp] * (B.transpose() @ self._C_material    @ B)
             Ke_void     += thickness*self.get_determinant_Jacobian_4()[0,gqp]*GQ_WEIGHT_4[gqp] * (B.transpose() @ (Emin*self._C_void) @ B)
 
-            # Elemental membrane mass matrix
-            S:np.ndarray = np.array([[self._Mesh__S4[0,gqp], 0, self._Mesh__S4[1,gqp], 0,self._Mesh__S4[2,gqp], 0, self._Mesh__S4[3,gqp], 0],
-                    [0, self._Mesh__S4[0,gqp], 0, self._Mesh__S4[1,gqp], 0, self._Mesh__S4[2,gqp], 0, self._Mesh__S4[3,gqp]]])
-
-            Me = Me + (rho*thickness*self.get_determinant_Jacobian_4()[0,gqp] * GQ_WEIGHT_4[gqp])*(S.transpose() @ S)
-
         # Loop for each element
         for el in range(self.__mesh_grid.nel_total):
             Ke = Ke_material if (abs(density_vector[0,el] - E0) < 1e-12) else Ke_void
                         
             if self.sparse_matrices:
-                assemble_global_spmatrices(Ke,Me,Fe,self.__K,self.__M,self.__F,el,self.MeshGrid.E,
-                                     NUMBER_OF_NODES_X_ELEMENT,NUMBER_OF_NODAL_DOF)
+                assemble_global_spmatrix_stiffness(Ke, self.__K, el, self.MeshGrid.E, NUMBER_OF_NODES_X_ELEMENT, NUMBER_OF_NODAL_DOF)
             else:
-                assemble_global_matrices(Ke,Me,Fe,self.__K,self.__M,self.__F,el,self.MeshGrid.E,
-                                     NUMBER_OF_NODES_X_ELEMENT,NUMBER_OF_NODAL_DOF)
+                raise NotImplementedError('Non-sparse matrices are not supported yet.')
+                # assemble_global_matrices(Ke,Me,Fe,self.__K,self.__M,self.__F,el,self.MeshGrid.E,
+                #                      NUMBER_OF_NODES_X_ELEMENT,NUMBER_OF_NODAL_DOF)
 
     def set_matrices(self,
             density_vector:np.ndarray,
