@@ -304,6 +304,8 @@ def retrieve_Strain_Stress(
         NN:int,NN_l:int,NN_h:int,E:np.ndarray,NE:int,
         u:np.ndarray,
         density_vector:np.ndarray,
+        C_material:np.ndarray,
+        C_void:np.ndarray,
         # V1_e:np.ndarray,V3_e:np.ndarray,
         # E11:float,E22:float,G12:float,nu12:float,
         # _E0: float, 
@@ -372,9 +374,12 @@ def retrieve_Strain_Stress(
         # Element property
         Ep = E[el,5]
 
+        # JELLE TODO : where is E0/Emin in this case??
+        C_mat = C_material if (density_vector[0,el] > 1e-12) else 1e-9*C_void
+
         # JELLE TODO : this part is the same as in `Mesh.__assemble_finite_element_matrices`
         # JELLE TODO : remove the abs? densities should not be negative anyways
-        if density_vector[0,el] > 1e-12:
+        # if density_vector[0,el] > 1e-12:
             # JELLE TODO : make E function of density
             # JELLE TODO : what to make of this E0 and E thing? see the `Mesh.__assemble_finite_element_matrices`
             # C_mat = _E_DEFAULT / (1 - _NU_DEFAULT**2) * np.array([
@@ -384,12 +389,12 @@ def retrieve_Strain_Stress(
             # ])
             # V1 = V1_e[el,0]
             # V3 = V3_e[el,0]
-            C_mat:np.ndarray = compute_in_plane_C_matrix(
-                E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
-            )
-        else:
-            # JELLE TODO : where tf is Emin?
-            C_mat:np.ndarray = 1e-9*np.array([[1,1,0],[1,1,0],[0,0,1]])
+        #     C_mat:np.ndarray = compute_in_plane_C_matrix(
+        #         E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
+        #     )
+        # else:
+        #     # JELLE TODO : where tf is Emin?
+        #     C_mat:np.ndarray = 1e-9*np.array([[1,1,0],[1,1,0],[0,0,1]])
         
         Ne = np.array([N1,N2,N3,N4]).reshape((4,))
         
@@ -520,11 +525,17 @@ class Mesh:
         # self.__nu12:float = nu12
         # (self.__E0, self.__nu) = (E0, nu)
 
+        self._C_material:np.ndarray = compute_in_plane_C_matrix(
+            E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
+        )
+        self._C_void = np.array([[1, 1, 0], [1, 1, 0], [0, 0, 1]], dtype=np.float64)
+
         # Initialise Global Matrices for finite element method
         self.__non_zero_matrices:bool = False
 
         # TODO : reset shape and jacobian too before every evalutation?
         self._SRI = SRI
+        self._generate_sparse_pattern()
         self._reset()
 
         # if not self.sparse_matrices:
@@ -705,7 +716,7 @@ class Mesh:
             - nn: Size of the system
         '''
 
-        if not(hasattr(self, '_arr_ii')) : self._generate_sparse_pattern()
+        # if not(hasattr(self, '_arr_ii')) : self._generate_sparse_pattern()
 
         # Generate ones to match the size of the arrays
         ones_arr_arr:np.ndarray = np.ones_like(self._arr_ii_arr)
@@ -923,13 +934,14 @@ class Mesh:
         '''
         # Loop for each element
         for el in range(self.__mesh_grid.nel_total):
+            C = self._C_material if (abs(density_vector[0,el] - E0) < 1e-12) else Emin*self._C_void
 
             # IN THE ACTUAL VARIABLE STIFFNESS MODELING, ELEMENTAL V1 & V3 VALUES
             # SHOULD BE TAKEN
             # V1 = 0.0; V3 = 0.0;
 
             # JELLE TODO : remove the abs? densities should not be negative anyways
-            if abs(density_vector[0,el] - E0) < 1e-12:
+            # if abs(density_vector[0,el] - E0) < 1e-12:
                 # JELLE TODO : make E function of density
                 # C = _E_DEFAULT / (1 - _NU_DEFAULT**2) * np.array([
                 #     (1, _NU_DEFAULT, 0),
@@ -938,11 +950,11 @@ class Mesh:
                 # ])
                 # V1 = V1_e[el,0]
                 # V3 = V3_e[el,0]
-                C:np.ndarray = compute_in_plane_C_matrix(
-                    E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
-                )
-            else:
-                C = Emin * np.array([[1,1,0],[1,1,0],[0,0,1]])
+                # C:np.ndarray = compute_in_plane_C_matrix(
+                #     E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
+                # )
+            # else:
+                # C = Emin * np.array([[1,1,0],[1,1,0],[0,0,1]])
                
             # Initialize Ke, Me and Fe to zero
             Ke = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
@@ -1077,6 +1089,8 @@ class Mesh:
             NE = self.__mesh_grid.nel_total,
             u=disp,
             density_vector=density_vector,
+            C_material = self._C_material,
+            C_void = self._C_void,
             # V1_e=V1_e,
             # V3_e=V3_e,
             # E11 = self.__E11,
@@ -1114,14 +1128,14 @@ class Mesh:
 
         # Loop for each element
         for el in range(self.__mesh_grid.nel_total):
-
+            C = self._C_material if (abs(density_vector[0,el] - E0) < 1e-12) else Emin*self._C_void
             # IN THE ACTUAL VARIABLE STIFFNESS MODELING, ELEMENTAL V1 & V3 VALUES
             # SHOULD BE TAKEN
             # V1 = 0.0; V3 = 0.0;
 
             # JELLE TODO : this part is the same as in `Mesh.__assemble_finite_element_matrices`
             # JELLE TODO : remove the abs? densities should not be negative anyways
-            if abs(density_vector[0,el] - E0) < 1e-12:
+            # if abs(density_vector[0,el] - E0) < 1e-12:
                 # JELLE TODO : make E function of density
                 # C = _E_DEFAULT / (1 - _NU_DEFAULT**2) * np.array([
                 #     (1, _NU_DEFAULT, 0),
@@ -1129,12 +1143,12 @@ class Mesh:
                 #     (0, 0, (1-_NU_DEFAULT)/2)
                 # ])
                 # V1 = V1_e[el,0]
-                # V3 = V3_e[el,0]
-                C:np.ndarray = compute_in_plane_C_matrix(
-                    E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
-                )
-            else:
-                C:np.ndarray = Emin*np.array([[1,1,0],[1,1,0],[0,0,1]], dtype=np.float64)
+                # # V3 = V3_e[el,0]
+                # C:np.ndarray = compute_in_plane_C_matrix(
+                #     E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
+                # )
+            # else:
+                # C:np.ndarray = Emin*np.array([[1,1,0],[1,1,0],[0,0,1]], dtype=np.float64)
                
             # Initialize Ke
             Ke = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
