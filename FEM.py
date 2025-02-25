@@ -1140,44 +1140,23 @@ class Mesh:
         # Initialise a compliance vector
         comp_vec:np.ndarray = np.zeros((self.MeshGrid.nel_total,1))
 
+        Ke_material = np.zeros((
+            NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
+            NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF
+        ), dtype=np.float64)
+        Ke_void = np.zeros_like(Ke_material)
+
+        # General B Matrix
+        B_gen = gen_B_matrix(self._Mesh__dSdxy4,4)
+
+        for gqp in range(4):
+            # Elemental membrane stiffness matrix
+            B:np.ndarray = B_gen[:,:,gqp]
+            Ke_material += thickness*self.get_determinant_Jacobian_4()[0,gqp]*GQ_WEIGHT_4[gqp] * (B.transpose() @ self._C_material    @ B)
+            Ke_void     += thickness*self.get_determinant_Jacobian_4()[0,gqp]*GQ_WEIGHT_4[gqp] * (B.transpose() @ (Emin*self._C_void) @ B)
+
         # Loop for each element
-        for el in range(self.__mesh_grid.nel_total):
-            C = self._C_material if (abs(density_vector[0,el] - E0) < 1e-12) else Emin*self._C_void
-            # IN THE ACTUAL VARIABLE STIFFNESS MODELING, ELEMENTAL V1 & V3 VALUES
-            # SHOULD BE TAKEN
-            # V1 = 0.0; V3 = 0.0;
-
-            # JELLE TODO : this part is the same as in `Mesh.__assemble_finite_element_matrices`
-            # JELLE TODO : remove the abs? densities should not be negative anyways
-            # if abs(density_vector[0,el] - E0) < 1e-12:
-                # JELLE TODO : make E function of density
-                # C = _E_DEFAULT / (1 - _NU_DEFAULT**2) * np.array([
-                #     (1, _NU_DEFAULT, 0),
-                #     (_NU_DEFAULT, 1, 0),
-                #     (0, 0, (1-_NU_DEFAULT)/2)
-                # ])
-                # V1 = V1_e[el,0]
-                # # V3 = V3_e[el,0]
-                # C:np.ndarray = compute_in_plane_C_matrix(
-                #     E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
-                # )
-            # else:
-                # C:np.ndarray = Emin*np.array([[1,1,0],[1,1,0],[0,0,1]], dtype=np.float64)
-               
-            # Initialize Ke
-            Ke = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
-                          NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF))
-            
-            # General B Matrix
-            B_gen = gen_B_matrix(self.__dSdxy4,4)
-
-            # Gauss quadrature
-            for gqp in range(4):
-                # Elemental membrane stiffness matrix
-                B:np.ndarray = B_gen[:,:,gqp]
-
-                Ke = Ke + thickness*self.get_determinant_Jacobian_4()[0,gqp]*GQ_WEIGHT_4[gqp] * (B.transpose() @ C @ B)
-            
+        for el in range(self.__mesh_grid.nel_total):           
             # Get the nodal freedom table mapping the positions of the DOFS linked per element
 
             elem_nodes = self.MeshGrid.E[el,1:5]
@@ -1193,7 +1172,10 @@ class Mesh:
             # Extract the displacements of the element from global displacement vector
             u_el:np.ndarray = disp[tmp_DOF].reshape((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,1))
             
-            comp_vec[el] = u_el.transpose() @ Ke @ u_el
+            if (abs(density_vector[0,el] - E0) < 1e-12):
+                comp_vec[el] = (u_el.transpose() @ Ke_material @ u_el)
+            else:
+                comp_vec[el] = (u_el.transpose() @ Ke_void @ u_el)
 
     
         return comp_vec
