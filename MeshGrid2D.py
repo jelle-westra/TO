@@ -111,7 +111,7 @@ class MeshGrid2D:
     # Element ID, IDs of the corner grids and orientation angle
     def __set_element_data_matrix__(self)->None:
 
-        self.__E:np.ndarray = np.zeros((self.__nel_total,6),dtype=np.uint64)
+        self.__E:np.ndarray = np.zeros((self.__nel_total,6),dtype=np.int64)
         for ii in np.arange(0,self.__nel_total,1):
             # IDs of the corner grids
             n1:int = ii+np.fix((ii)/self.__nelx)

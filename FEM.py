@@ -932,53 +932,35 @@ class Mesh:
         - rho: material density
         - Emin: Minimum Material Density
         '''
+        
+        # General B Matrix
+        B_gen = gen_B_matrix(self.__dSdxy4,4)
+
+        Me = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
+                NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF))
+        Ke_material = np.zeros_like(Me)
+        Ke_void     = np.zeros_like(Me)
+        Fe = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF, 1))
+
+        # General B Matrix
+        B_gen = gen_B_matrix(self._Mesh__dSdxy4,4)
+
+        for gqp in range(4):
+            # Elemental membrane stiffness matrix
+            B:np.ndarray = B_gen[:,:,gqp]
+            Ke_material += thickness*self.get_determinant_Jacobian_4()[0,gqp]*GQ_WEIGHT_4[gqp] * (B.transpose() @ self._C_material    @ B)
+            Ke_void     += thickness*self.get_determinant_Jacobian_4()[0,gqp]*GQ_WEIGHT_4[gqp] * (B.transpose() @ (Emin*self._C_void) @ B)
+
+            # Elemental membrane mass matrix
+            S:np.ndarray = np.array([[self._Mesh__S4[0,gqp], 0, self._Mesh__S4[1,gqp], 0,self._Mesh__S4[2,gqp], 0, self._Mesh__S4[3,gqp], 0],
+                    [0, self._Mesh__S4[0,gqp], 0, self._Mesh__S4[1,gqp], 0, self._Mesh__S4[2,gqp], 0, self._Mesh__S4[3,gqp]]])
+
+            Me = Me + (rho*thickness*self.get_determinant_Jacobian_4()[0,gqp] * GQ_WEIGHT_4[gqp])*(S.transpose() @ S)
+
         # Loop for each element
         for el in range(self.__mesh_grid.nel_total):
-            C = self._C_material if (abs(density_vector[0,el] - E0) < 1e-12) else Emin*self._C_void
-
-            # IN THE ACTUAL VARIABLE STIFFNESS MODELING, ELEMENTAL V1 & V3 VALUES
-            # SHOULD BE TAKEN
-            # V1 = 0.0; V3 = 0.0;
-
-            # JELLE TODO : remove the abs? densities should not be negative anyways
-            # if abs(density_vector[0,el] - E0) < 1e-12:
-                # JELLE TODO : make E function of density
-                # C = _E_DEFAULT / (1 - _NU_DEFAULT**2) * np.array([
-                #     (1, _NU_DEFAULT, 0),
-                #     (_NU_DEFAULT, 1, 0),
-                #     (0, 0, (1-_NU_DEFAULT)/2)
-                # ])
-                # V1 = V1_e[el,0]
-                # V3 = V3_e[el,0]
-                # C:np.ndarray = compute_in_plane_C_matrix(
-                #     E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
-                # )
-            # else:
-                # C = Emin * np.array([[1,1,0],[1,1,0],[0,0,1]])
-               
-            # Initialize Ke, Me and Fe to zero
-            Ke = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
-                          NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF))
-            Me = np.zeros_like(Ke)
-            Fe = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,
-                          1))
-            
-            # General B Matrix
-            B_gen = gen_B_matrix(self.__dSdxy4,4)
-
-            # Gauss quadrature
-            for gqp in range(4):
-                # Elemental membrane stiffness matrix
-                B:np.ndarray = B_gen[:,:,gqp]
-
-                Ke = Ke + thickness*self.get_determinant_Jacobian_4()[0,gqp]*GQ_WEIGHT_4[gqp] * (B.transpose() @ C @ B)
-
-                # Elemental membrane mass matrix
-                S:np.ndarray = np.array([[self.__S4[0,gqp], 0, self.__S4[1,gqp], 0,self.__S4[2,gqp], 0, self.__S4[3,gqp], 0],
-                     [0, self.__S4[0,gqp], 0, self.__S4[1,gqp], 0, self.__S4[2,gqp], 0, self.__S4[3,gqp]]])
-
-                Me = Me + (rho*thickness*self.get_determinant_Jacobian_4()[0,gqp] * GQ_WEIGHT_4[gqp])*(S.transpose() @ S)
-            
+            Ke = Ke_material if (abs(density_vector[0,el] - E0) < 1e-12) else Ke_void
+                        
             if self.sparse_matrices:
                 assemble_global_spmatrices(Ke,Me,Fe,self.__K,self.__M,self.__F,el,self.MeshGrid.E,
                                      NUMBER_OF_NODES_X_ELEMENT,NUMBER_OF_NODAL_DOF)
