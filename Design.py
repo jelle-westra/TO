@@ -73,7 +73,7 @@ class Design:
                  scalation_mode:str = "Bujny",
                  initialise_zero:bool=False,
                  add_noise:bool = False,
-                 E0:float = 1.00,
+                 E0:float = 1.0,
                  Emin:float = 1e-09,
                  **kwargs):
         '''
@@ -1405,16 +1405,16 @@ class Design:
         elements.
         """
 
-        # Get the topology
+        # # Get the topology
         # topo:np.ndarray = self.topology
 
-        # Pass it to the function (Don't return the array with bodies)
+        # # Pass it to the function (Don't return the array with bodies)
         # numBodies, _ = compute_number_of_joined_bodies_2(topo,self.Emin,self.E0)
 
         # return numBodies
         
-        # JELLE TODO : only use relative density, this uses the elasticity
-        return label((self.topology > 1/2).astype(np.uint8), structure=np.ones((3,3), dtype=np.uint8))[1]
+        # JELLE TODO : only use relative density, this uses the elasticity?
+        return label((self.topology > .1).astype(np.uint8), structure=np.ones((3,3), dtype=np.uint8))[1]
     
 
     def identify_natural_constraints_violation(self)->List[bool]:

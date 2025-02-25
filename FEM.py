@@ -28,12 +28,13 @@ ELEMENT_LENGTH_DEFAULT:float = 1.0 # Default length of Finite 2D Plate Element
 ELEMENT_HEIGHT_DEFAULT:float = 1.0 # Default height of Finite 2D Plate Element
 
 # Material property constants
-# E11_DEFAULT:float = 25
-# E22_DEFAULT:float = 1
-# G12_DEFAULT:float = 0.5
-# NU12_DEFAULT:float = 0.25
+E11_DEFAULT:float = 25
+E22_DEFAULT:float = 1
+G12_DEFAULT:float = 0.5
+NU12_DEFAULT:float = 0.25
 
-(_E0_DEFAULT, _NU_DEFAULT) = (1.0, 0.3)
+# TODO : fix the E issue
+(_E_DEFAULT, _NU_DEFAULT) = (10.0, 0.3)
 
 # Finite Element Parameters
 NUMBER_OF_NODES_X_ELEMENT:int = 4 # Number of nodes per element
@@ -109,57 +110,57 @@ def gen_B_matrix(dSdxy:np.ndarray,tot_num_GP:int=0)->np.ndarray:
 
     return B_mat_gen
 
-# def compute_nu21(E11:float,E22:float,nu12:float)->float:
-#     return E22*nu12/E11
+def compute_nu21(E11:float,E22:float,nu12:float)->float:
+    return E22*nu12/E11
 
-# def compute_reduced_stiffness_terms(E11:float,E22:float,G12:float,nu12:float)->list:
-#     nu21:float = compute_nu21(E11=E11,E22=E22,nu12=nu12)
-#     q11:float = E11/(1-nu12*nu21)
-#     q22:float = E22/(1-nu12*nu21)
-#     q12:float = nu12*E22/(1-nu12*nu21)
-#     q66:float = G12
-#     return q11,q22,q12,q66
+def compute_reduced_stiffness_terms(E11:float,E22:float,G12:float,nu12:float)->list:
+    nu21:float = compute_nu21(E11=E11,E22=E22,nu12=nu12)
+    q11:float = E11/(1-nu12*nu21)
+    q22:float = E22/(1-nu12*nu21)
+    q12:float = nu12*E22/(1-nu12*nu21)
+    q66:float = G12
+    return q11,q22,q12,q66
 
-# def compute_material_invariants(E11:float,E22:float,G12:float,nu12:float)->list:
-#     q11,q22,q12,q66 = compute_reduced_stiffness_terms(E11=E11,E22=E22,nu12=nu12,G12=G12)
+def compute_material_invariants(E11:float,E22:float,G12:float,nu12:float)->list:
+    q11,q22,q12,q66 = compute_reduced_stiffness_terms(E11=E11,E22=E22,nu12=nu12,G12=G12)
 
-#     u1:float = 1/8*(3*q11+3*q22+2*q12+4*q66)
-#     u2:float = 1/2*(q11-q22)
-#     u3:float = 1/8*(q11+q22-2*q12-4*q66)
-#     u4:float = 1/8*(q11+q22+6*q12-4*q66)
-#     u5:float = 1/8*(q11+q22-2*q12+4*q66)
+    u1:float = 1/8*(3*q11+3*q22+2*q12+4*q66)
+    u2:float = 1/2*(q11-q22)
+    u3:float = 1/8*(q11+q22-2*q12-4*q66)
+    u4:float = 1/8*(q11+q22+6*q12-4*q66)
+    u5:float = 1/8*(q11+q22-2*q12+4*q66)
 
-#     return u1,u2,u3,u4,u5
+    return u1,u2,u3,u4,u5
 
 
-# def compute_in_plane_C_matrix(E11:float,E22:float,G12:float,nu12:float,
-#                                 V1:float,V3:float)-> np.ndarray:
-#     '''
-#     # Compute the in-plane C-matrix for the Finite Element Method
-#     Inputs:
-#         - E11: Young Modulus in 11 direction
-#         - E22: Young Modulus in 22 direction
-#         - G12: Torsional Modulus in 12 direction
-#         - nu12: Poisson's Ratios
-#         - V1: Fiber orientation vector 1
-#         - V3: Fiber orientation vector 2 
-#     '''
+def compute_in_plane_C_matrix(E11:float,E22:float,G12:float,nu12:float,
+                                V1:float,V3:float)-> np.ndarray:
+    '''
+    # Compute the in-plane C-matrix for the Finite Element Method
+    Inputs:
+        - E11: Young Modulus in 11 direction
+        - E22: Young Modulus in 22 direction
+        - G12: Torsional Modulus in 12 direction
+        - nu12: Poisson's Ratios
+        - V1: Fiber orientation vector 1
+        - V3: Fiber orientation vector 2 
+    '''
     
-#     # Compute the material invariants
-#     u1,u2,u3,u4,u5 = compute_material_invariants(E11=E11,E22=E22,nu12=nu12,G12=G12)
+    # Compute the material invariants
+    u1,u2,u3,u4,u5 = compute_material_invariants(E11=E11,E22=E22,nu12=nu12,G12=G12)
 
-#     # C matrix entities
-#     c11:float = u1+u2*V1+u3*V3
-#     c12:float = u4-u3*V3
-#     c22:float = u1-u2*V1+u3*V3
-#     c33:float = u5-u3*V3
+    # C matrix entities
+    c11:float = u1+u2*V1+u3*V3
+    c12:float = u4-u3*V3
+    c22:float = u1-u2*V1+u3*V3
+    c33:float = u5-u3*V3
     
-#     # Assemble the in-plane stiffness matrix C from V1 and V3
-#     C_mat:np.ndarray = np.array([[c11, c12, 0  ],
-#                                  [c12, c22, 0  ],
-#                                  [0  , 0  , c33]])
+    # Assemble the in-plane stiffness matrix C from V1 and V3
+    C_mat:np.ndarray = np.array([[c11, c12, 0  ],
+                                 [c12, c22, 0  ],
+                                 [0  , 0  , c33]])
 
-#     return C_mat
+    return C_mat
 
 def assemble_global_matrices(element_stiffness_mat:np.ndarray,
                              element_mass_mat:np.ndarray,
@@ -305,8 +306,8 @@ def retrieve_Strain_Stress(
         density_vector:np.ndarray,
         # V1_e:np.ndarray,V3_e:np.ndarray,
         # E11:float,E22:float,G12:float,nu12:float,
-        _E0: float, 
-        _nu: float,
+        # _E0: float, 
+        # _nu: float,
         dSdxy:np.ndarray
     ) -> list :
     
@@ -373,17 +374,19 @@ def retrieve_Strain_Stress(
 
         # JELLE TODO : this part is the same as in `Mesh.__assemble_finite_element_matrices`
         # JELLE TODO : remove the abs? densities should not be negative anyways
-        if abs(density_vector[0,el] - _E0) < 1e-12:
+        if density_vector[0,el] > 1e-12:
             # JELLE TODO : make E function of density
             # JELLE TODO : what to make of this E0 and E thing? see the `Mesh.__assemble_finite_element_matrices`
-            C_mat = (_E0) / (1 - _nu**2) * np.array([
-                (1, _nu, 0),
-                (_nu, 1, 0),
-                (0, 0, (1-_nu)/2)
-            ])
+            # C_mat = _E_DEFAULT / (1 - _NU_DEFAULT**2) * np.array([
+            #     (1, _NU_DEFAULT, 0),
+            #     (_NU_DEFAULT, 1, 0),
+            #     (0, 0, (1-_NU_DEFAULT)/2)
+            # ])
             # V1 = V1_e[el,0]
             # V3 = V3_e[el,0]
-            # C_mat:np.ndarray = compute_in_plane_C_matrix(E11,E22,G12,nu12,V1,V3)
+            C_mat:np.ndarray = compute_in_plane_C_matrix(
+                E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
+            )
         else:
             # JELLE TODO : where tf is Emin?
             C_mat:np.ndarray = 1e-9*np.array([[1,1,0],[1,1,0],[0,0,1]])
@@ -496,8 +499,8 @@ class Mesh:
     Mesh Class definition
     '''
     def __init__(self,
-                 E0 : float = _E0_DEFAULT,
-                 nu: float = _NU_DEFAULT,
+                #  E0 : float = _E0_DEFAULT,
+                #  nu: float = _NU_DEFAULT,
                 #  E11:float=E11_DEFAULT,E22:float=E22_DEFAULT,
                 #  G12:float=G12_DEFAULT,nu12:float=NU12_DEFAULT,
                  length:float=LENGTH_DEFAULT,height:float=HEIGHT_DEFAULT,
@@ -515,7 +518,7 @@ class Mesh:
         # self.__E22:float = E22
         # self.__G12:float = G12
         # self.__nu12:float = nu12
-        (self.__E0, self.__nu) = (E0, nu)
+        # (self.__E0, self.__nu) = (E0, nu)
 
         # Initialise Global Matrices for finite element method
         self.__non_zero_matrices:bool = False
@@ -745,11 +748,11 @@ class Mesh:
         ''' 
         return self.__mesh_grid
     
-    @property
-    def E0(self) -> float : return self.__E0
+    # @property
+    # def E0(self) -> float : return self.__E0
 
-    @property
-    def nu(self) -> float : return self.__nu
+    # @property
+    # def nu(self) -> float : return self.__nu
     
     # @property
     # def E11(self)->float:
@@ -928,18 +931,16 @@ class Mesh:
             # JELLE TODO : remove the abs? densities should not be negative anyways
             if abs(density_vector[0,el] - E0) < 1e-12:
                 # JELLE TODO : make E function of density
-                C = (E0 * self.__E0) / (1 - self.__nu**2) * np.array([
-                    (1, self.__nu, 0),
-                    (self.__nu, 1, 0),
-                    (0, 0, (1-self.__nu)/2)
-                ])
+                # C = _E_DEFAULT / (1 - _NU_DEFAULT**2) * np.array([
+                #     (1, _NU_DEFAULT, 0),
+                #     (_NU_DEFAULT, 1, 0),
+                #     (0, 0, (1-_NU_DEFAULT)/2)
+                # ])
                 # V1 = V1_e[el,0]
                 # V3 = V3_e[el,0]
-                # C:np.ndarray = compute_in_plane_C_matrix(self.__E11,
-                #                               self.__E22,
-                #                               self.__G12,
-                #                               self.__nu12,
-                #                               V1,V3)
+                C:np.ndarray = compute_in_plane_C_matrix(
+                    E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
+                )
             else:
                 C = Emin * np.array([[1,1,0],[1,1,0],[0,0,1]])
                
@@ -1082,8 +1083,7 @@ class Mesh:
             # E22 = self.__E22,
             # G12 = self.__G12,
             # nu12=self.__nu12,
-            _E0 = self.__E0, 
-            _nu = self.__nu,
+            # _E0 = self.__E0, 
             dSdxy=self.__dSdxy4
         )
 
@@ -1123,20 +1123,18 @@ class Mesh:
             # JELLE TODO : remove the abs? densities should not be negative anyways
             if abs(density_vector[0,el] - E0) < 1e-12:
                 # JELLE TODO : make E function of density
-                C = (E0 * self.__E0) / (1 - self.__nu**2) * np.array([
-                    (1, self.__nu, 0),
-                    (self.__nu, 1, 0),
-                    (0, 0, (1-self.__nu)/2)
-                ])
+                # C = _E_DEFAULT / (1 - _NU_DEFAULT**2) * np.array([
+                #     (1, _NU_DEFAULT, 0),
+                #     (_NU_DEFAULT, 1, 0),
+                #     (0, 0, (1-_NU_DEFAULT)/2)
+                # ])
                 # V1 = V1_e[el,0]
                 # V3 = V3_e[el,0]
-                # C:np.ndarray = compute_in_plane_C_matrix(self.__E11,
-                #                               self.__E22,
-                #                               self.__G12,
-                #                               self.__nu12,
-                #                               V1,V3)
+                C:np.ndarray = compute_in_plane_C_matrix(
+                    E11_DEFAULT, E22_DEFAULT, G12_DEFAULT, NU12_DEFAULT, 0,0
+                )
             else:
-                C:np.ndarray = Emin*np.array([[1,1,0],[1,1,0],[0,0,1]])
+                C:np.ndarray = Emin*np.array([[1,1,0],[1,1,0],[0,0,1]], dtype=np.float64)
                
             # Initialize Ke
             Ke = np.zeros((NUMBER_OF_NODES_X_ELEMENT*NUMBER_OF_NODAL_DOF,

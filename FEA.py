@@ -335,7 +335,7 @@ def evaluate_FEA(
     # Check the entry on the cost function
     if cost_function not in COST_FUNCTIONS:
         raise ValueError("The cost function set is not allowed")
-    
+        
     # x = x.flatten()
     
     # V3_1:float = x[1]
@@ -759,62 +759,63 @@ def append_mass_elements_recursive(idx:int,set_A_tot:list,set_C_tot:list,
         return
     
 # JELLE TODO : image processing CC?
-def compute_number_of_joined_bodies_2(TO_mat:np.ndarray,Emin:float,E0:float)-> int:
-    '''
-    This function returns the positions the number of joined bodies. This points out
-    which solutions are unfeasible as the beams are not totally connected
+def compute_number_of_joined_bodies_2(TO_mat:np.ndarray,Emin:float,E0:float)-> int : ...
+# def compute_number_of_joined_bodies_2(TO_mat:np.ndarray,Emin:float,E0:float)-> int:
+#     '''
+#     This function returns the positions the number of joined bodies. This points out
+#     which solutions are unfeasible as the beams are not totally connected
 
-    ----------------
-    Inputs:
-    - TO_mat: topology indicating density/material distribution
-    - Emin: Setting of the Ersatz Material; to be numerically close to 0
-    - E0: Setting the Material interpolator (close to 1)
-    '''
+#     ----------------
+#     Inputs:
+#     - TO_mat: topology indicating density/material distribution
+#     - Emin: Setting of the Ersatz Material; to be numerically close to 0
+#     - E0: Setting the Material interpolator (close to 1)
+#     '''
         
-    # Get length and height of the elements based on density matrix
-    l:float = TO_mat.shape[1]
-    h:float = TO_mat.shape[0]
+#     # Get length and height of the elements based on density matrix
+#     l:float = TO_mat.shape[1]
+#     h:float = TO_mat.shape[0]
     
-    # Generate the mesh object
-    mesh:Mesh = Mesh(length=l,height=h,element_length=ELEMENT_LENGTH_DEFAULT,
-                     element_height=ELEMENT_HEIGHT_DEFAULT,
-                     sparse_matrices=True)
+#     # Generate the mesh object
+#     mesh:Mesh = Mesh(length=l,height=h,element_length=ELEMENT_LENGTH_DEFAULT,
+#                      element_height=ELEMENT_HEIGHT_DEFAULT,
+#                      sparse_matrices=True)
     
-    # Reshape the density matrix into a vector
-    #density_vec:np.ndarray = np.rot90(TO_mat).reshape((1,mesh.MeshGrid.nel_total),order='F')
-    density_vec:np.ndarray = TO_mat.reshape((1,mesh.MeshGrid.nel_total),order='C')
+#     # Reshape the density matrix into a vector
+#     #density_vec:np.ndarray = np.rot90(TO_mat).reshape((1,mesh.MeshGrid.nel_total),order='F')
+#     density_vec:np.ndarray = TO_mat.reshape((1,mesh.MeshGrid.nel_total),order='C')
     
 
-    # Get an ordered array with the element_numbering:
-    ordered_arr:np.ndarray = np.ravel(np.arange(0, mesh.MeshGrid.nel_total))
+#     # Get an ordered array with the element_numbering:
+#     ordered_arr:np.ndarray = np.ravel(np.arange(0, mesh.MeshGrid.nel_total))
 
-    # Get the elements where there is material
-    material_elems:np.ndarray = ordered_arr[np.where(np.abs(density_vec.ravel()-E0)<1e-12)]
+#     # Get the elements where there is material
+#     material_elems:np.ndarray = ordered_arr[np.where(np.abs(density_vec.ravel()-E0)<1e-12)]
 
-    # Generate an array to store if the element has been visited
-    visited:np.ndarray = np.zeros_like(material_elems,dtype=bool)
+#     # Generate an array to store if the element has been visited
+#     visited:np.ndarray = np.zeros_like(material_elems,dtype=bool)
 
-    # Generate an array to store the material elements belonging to a set
-    set_A:list = list()
+#     # Generate an array to store the material elements belonging to a set
+#     set_A:list = list()
 
-    # Generate an array to store the sets of bodies
-    set_bodies:list = list()
+#     # Generate an array to store the sets of bodies
+#     set_bodies:list = list()
 
-    for idx,elem_idx in enumerate(material_elems):
-        if not visited[idx]:
-            append_mass_elements_iterative(idx=idx, elem_idx=elem_idx,visited_list=visited,
-                                           set_A_tot=set_A,material_elem_list= material_elems,
-                                           find_neighbours_function= mesh.MeshGrid.find_neighbouring_elements_quad
-                                           )
+#     for idx,elem_idx in enumerate(material_elems):
+#         if not visited[idx]:
+#             append_mass_elements_iterative(idx=idx, elem_idx=elem_idx,visited_list=visited,
+#                                            set_A_tot=set_A,material_elem_list= material_elems,
+#                                            find_neighbours_function= mesh.MeshGrid.find_neighbouring_elements_quad
+#                                            )
             
-            # Append the bodies
-            set_bodies.append(set_A)
+#             # Append the bodies
+#             set_bodies.append(set_A)
 
-            #Clear the list of bodies
-            set_A = list()
+#             #Clear the list of bodies
+#             set_A = list()
 
-    # Return the number of joined bodies and the array
-    return len(set_bodies),set_bodies
+#     # Return the number of joined bodies and the array
+#     return len(set_bodies),set_bodies
     
 
 
