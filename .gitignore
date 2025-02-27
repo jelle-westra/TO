@@ -1,5 +1,5 @@
 *.DS_Store
-*.ipynb
+notepad.ipynb
 cProfile/
 
 # For now ignore results
